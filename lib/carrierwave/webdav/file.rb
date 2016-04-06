@@ -18,7 +18,6 @@ module CarrierWave
         @password = uploader.webdav_password || ''
         @options = {}
         @options = { basic_auth: { username: @username, password: @password } } if @username
-        @create_dirs = !uploader.webdav_autocreates_dirs
       end
 
       def read
@@ -38,9 +37,7 @@ module CarrierWave
       end
 
       def write(file)
-        if @create_dirs
-          res = mkcol
-        end
+        mkcol
 
         res = HTTParty.put(write_url, options.merge({ body: file }))
         if res.code != 201 and res.code != 204
@@ -82,7 +79,7 @@ module CarrierWave
       alias :file_length :length
       alias :size :length
 
-    private
+      private
 
       def read_url
         "#{server}/#{path}"
@@ -93,17 +90,32 @@ module CarrierWave
       end
 
       def mkcol
-        dirs = []
-        path.split('/')[0...-1].each do |dir|
-          dirs << "#{dirs[-1]}/#{dir}"
-        end # Make path like a/b/c/t.txt to array ['/a', '/a/b', '/a/b/c']
+        return if dirs_to_create.empty?
+
         use_server = @write_server ? @write_server : server
-        dirs.each do |dir|
+
+        dirs_to_create.each do |dir|
           res = HTTParty.mkcol("#{use_server}#{dir}", options)
           unless [200, 201, 207, 409].include? res.code
             raise CarrierWave::IntegrityError.new("Can't create a new collection: #{res.inspect}")
           end
         end # Make collections recursively
+      end
+
+      def dirs_to_create
+        dirs = []
+        path.split('/')[0...-1].each do |dir|
+          dirs << "#{dirs[-1]}/#{dir}"
+        end # Make path like a/b/c/t.txt to array ['/a', '/a/b', '/a/b/c']
+
+        find_dirs_that_dont_exist dirs
+      end
+
+      def find_dirs_that_dont_exist(dirs)
+        dirs.reject do |dir|
+          res = HTTParty.propfind("#{server}/#{dir}", options)
+          [200,201,207].include? res.code
+        end
       end
     end # File
   end # WebDAV
