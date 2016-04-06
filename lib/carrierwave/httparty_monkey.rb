@@ -7,7 +7,7 @@ require 'httparty'
 module HTTParty
 
   class Request
-    SupportedHTTPMethods << Net::HTTP::Mkcol
+    SupportedHTTPMethods += [Net::HTTP::Mkcol, Net::HTTP::Propfind]
   end
 
   module ClassMethods
@@ -15,6 +15,11 @@ module HTTParty
     def mkcol(path, options = {}, &block)
       perform_request Net::HTTP::Mkcol, path, options, &block
     end
+
+    def propfind(path, options, &block)
+      perform_request Net::HTTP::Propfind, path, options, &block
+    end
+
   end
 
   class Basement
@@ -23,6 +28,9 @@ module HTTParty
 
   def self.mkcol(*args, &block)
     Basement.mkcol(*args, &block)
+  end
+  def self.propfind(*args, &block)
+    Basement.propfind(*args, &block)
   end
 end # HTTParty
 
