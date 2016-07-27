@@ -7,7 +7,7 @@ require 'httparty'
 module HTTParty
 
   class Request
-    SupportedHTTPMethods += [Net::HTTP::Mkcol, Net::HTTP::Propfind]
+    SupportedHTTPMethods << Net::HTTP::Mkcol << Net::HTTP::Propfind
   end
 
   module ClassMethods
